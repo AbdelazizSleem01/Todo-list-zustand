@@ -12,7 +12,7 @@ export interface Todo {
   priority: Priority;
   createdAt: string;
   updatedAt: string;
-  userId?: string; 
+  userId?: string;
 }
 
 interface TodoState {
@@ -46,7 +46,7 @@ export const useTodoStore = create<TodoState>()(
           if (!response.ok) throw new Error('Failed to fetch todos');
           const todos = await response.json();
           
-          const formattedTodos = todos.map((todo: any) => ({
+          const formattedTodos = todos.map((todo: Todo) => ({
             ...todo,
             id: todo._id || todo.id
           }));
@@ -81,7 +81,7 @@ export const useTodoStore = create<TodoState>()(
           const { todos: serverTodos } = await response.json();
           
           set({ 
-            todos: serverTodos.map((todo: any) => ({
+            todos: serverTodos.map((todo: Todo) => ({
               ...todo,
               id: todo._id || todo.id
             })),
@@ -92,6 +92,7 @@ export const useTodoStore = create<TodoState>()(
         }
       },
 
+      // ... بقية الدوال تبقى كما هي
       addTodo: async (text, dueDate, priority = "medium") => {
         set({ loading: true, error: null });
         try {

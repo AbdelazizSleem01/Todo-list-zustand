@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 import clientPromise from '@/lib/mongodb'
 
 export async function GET(
@@ -7,10 +9,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const client = await clientPromise
     const db = client.db('todoapp')
     const todo = await db.collection('todos').findOne({ 
-      _id: new ObjectId(params.id) 
+      _id: new ObjectId(params.id),
+      userId: session.user.id
     })
     
     if (!todo) {
@@ -18,7 +27,7 @@ export async function GET(
     }
     
     return NextResponse.json(todo)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch todo' }, { status: 500 })
   }
 }
@@ -28,12 +37,21 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const updates = await request.json()
     const client = await clientPromise
     const db = client.db('todoapp')
     
     const result = await db.collection('todos').updateOne(
-      { _id: new ObjectId(params.id) },
+      { 
+        _id: new ObjectId(params.id),
+        userId: session.user.id 
+      },
       { 
         $set: { 
           ...updates,
@@ -47,7 +65,7 @@ export async function PUT(
     }
     
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to update todo' }, { status: 500 })
   }
 }
@@ -57,11 +75,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const client = await clientPromise
     const db = client.db('todoapp')
     
     const result = await db.collection('todos').deleteOne({ 
-      _id: new ObjectId(params.id) 
+      _id: new ObjectId(params.id),
+      userId: session.user.id
     })
     
     if (result.deletedCount === 0) {
@@ -69,7 +94,7 @@ export async function DELETE(
     }
     
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to delete todo' }, { status: 500 })
   }
 }

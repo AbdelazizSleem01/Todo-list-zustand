@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 
@@ -63,7 +63,7 @@ export default function SignIn() {
           router.push("/");
         }
       }
-    } catch (error) {
+    } catch {
       setError("An error occurred");
     } finally {
       setLoading(false);
