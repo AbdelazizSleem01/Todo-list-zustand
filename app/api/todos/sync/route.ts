@@ -4,6 +4,23 @@ import { authOptions } from "@/lib/auth"
 import clientPromise from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
 
+export interface ClientTodo {
+  _id?: string;
+  id?: string;
+  text: string;
+  completed: boolean;
+  dueDate?: string;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+}
+
+interface SyncRequest {
+  lastSync: number;
+  todos: ClientTodo[];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -12,7 +29,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { lastSync, todos: clientTodos } = await request.json()
+    const { lastSync, todos: clientTodos }: SyncRequest = await request.json()
     const client = await clientPromise
     const db = client.db('todoapp')
 
@@ -24,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ todos: serverTodos })
     }
 
-    const clientUpdates = clientTodos.filter((todo: any) => 
+    const clientUpdates = clientTodos.filter((todo: ClientTodo) => 
       new Date(todo.updatedAt).getTime() > lastSync
     )
 
@@ -34,14 +51,20 @@ export async function POST(request: NextRequest) {
           { _id: new ObjectId(todo._id), userId: session.user.id },
           { 
             $set: { 
-              ...todo,
+              text: todo.text,
+              completed: todo.completed,
+              dueDate: todo.dueDate,
+              priority: todo.priority,
               updatedAt: new Date().toISOString()
             } 
           }
         )
       } else {
         await db.collection('todos').insertOne({
-          ...todo,
+          text: todo.text,
+          completed: todo.completed,
+          dueDate: todo.dueDate,
+          priority: todo.priority,
           userId: session.user.id,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -54,7 +77,7 @@ export async function POST(request: NextRequest) {
       .toArray()
 
     return NextResponse.json({ todos: updatedTodos })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 })
   }
 }
